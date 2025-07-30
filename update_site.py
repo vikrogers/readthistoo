@@ -11,8 +11,8 @@ headline = headline_tag.text.strip()
 story_url = "https://apnews.com" + headline_tag["href"]
 
 # Fake op-eds for now (real scraping is next phase)
-left_oped = "https://www.vox.com/"
-right_oped = "https://www.wsj.com/"
+left_oped = "https://www.left.example.com/"
+right_oped = "https://www.right.example.com/"
 
 # Build new HTML
 new_html = f"""<!DOCTYPE html>

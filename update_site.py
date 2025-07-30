@@ -2,19 +2,28 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-# Get top AP News headline
+# Step 1: Get top AP headline
 ap_url = "https://apnews.com/hub/ap-top-news"
 ap_html = requests.get(ap_url).text
 soup = BeautifulSoup(ap_html, "html.parser")
-headline_tag = soup.find("a", class_="PagePromo-link")
+
+# Try updated structure
+headline_tag = soup.find("a", href=True)
+while headline_tag and not headline_tag.text.strip():
+    headline_tag = headline_tag.find_next("a", href=True)
+
+if not headline_tag:
+    print("⚠️ Could not find a valid headline. Exiting.")
+    exit(1)
+
 headline = headline_tag.text.strip()
 story_url = "https://apnews.com" + headline_tag["href"]
 
-# Fake op-eds for now (real scraping is next phase)
-left_oped = "https://www.left.example.com/"
-right_oped = "https://www.right.example.com/"
+# Step 2: Placeholder op-eds
+left_oped = "https://left.example.com/"
+right_oped = "https://right.example.com/"
 
-# Build new HTML
+# Step 3: Build updated HTML content
 new_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,6 +52,8 @@ new_html = f"""<!DOCTYPE html>
 </body>
 </html>"""
 
-# Overwrite index.html
+# Step 4: Save to index.html
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(new_html)
+
+print("✅ index.html updated with latest headline.")

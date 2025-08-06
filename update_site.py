@@ -1,4 +1,5 @@
 import requests
+import html
 from datetime import datetime
 
 API_KEY = "bf39c65adee34e8e9c7c3c434f58f4d3"
@@ -12,14 +13,13 @@ if resp.status_code != 200 or not data.get("articles"):
     exit(1)
 
 article = data["articles"][0]
-headline = article["title"]
+headline = html.escape(article["title"])
 story_url = article["url"]
 
-# Placeholder opinion links
-left_oped = "https://left.example.com/"
-right_oped = "https://right.example.com/"
+# Quick real links to get you going
+left_oped = "https://www.vox.com/"
+right_oped = "https://www.wsj.com/"
 
-# Build the updated homepage
 new_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>

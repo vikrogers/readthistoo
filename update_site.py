@@ -1,30 +1,25 @@
 import requests
-from bs4 import BeautifulSoup
 from datetime import datetime
 
-# Step 1: Get top Reuters headline
-reuters_url = "https://www.reuters.com/news/archive/topNews"
-html = requests.get(reuters_url).text
-soup = BeautifulSoup(html, "html.parser")
+API_KEY = "bf39c65adee34e8e9c7c3c434f58f4d3"
+url = f"https://newsapi.org/v2/top-headlines?country=us&apiKey={API_KEY}"
 
-# Find first headline
-headline_tag = soup.find("h3", class_="story-title")
-if not headline_tag:
-    headline_tag = soup.find("a", {"href": True})
+resp = requests.get(url)
+data = resp.json()
 
-if not headline_tag or not headline_tag.text.strip():
-    print("⚠️ Could not find a valid headline. Exiting.")
+if resp.status_code != 200 or not data.get("articles"):
+    print("⚠️ Failed to fetch headlines:", data.get("message", ""))
     exit(1)
 
-headline = headline_tag.text.strip()
-href = headline_tag.find_parent("a")["href"] if headline_tag.find_parent("a") else headline_tag["href"]
-story_url = "https://www.reuters.com" + href
+article = data["articles"][0]
+headline = article["title"]
+story_url = article["url"]
 
-# Step 2: Placeholder op-eds
+# Placeholder opinion links
 left_oped = "https://left.example.com/"
 right_oped = "https://right.example.com/"
 
-# Step 3: Build updated HTML content
+# Build the updated homepage
 new_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,8 +48,7 @@ new_html = f"""<!DOCTYPE html>
 </body>
 </html>"""
 
-# Step 4: Save to index.html
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(new_html)
 
-print("✅ index.html updated with Reuters headline.")
+print("✅ index.html updated with headline from NewsAPI.")

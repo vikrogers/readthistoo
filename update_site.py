@@ -1,11 +1,14 @@
 import requests
 import html
 from datetime import datetime
+from bs4 import BeautifulSoup
+import urllib.parse
 
 API_KEY = "bf39c65adee34e8e9c7c3c434f58f4d3"
-url = f"https://newsapi.org/v2/top-headlines?country=us&apiKey={API_KEY}"
+news_url = f"https://newsapi.org/v2/top-headlines?country=us&apiKey={API_KEY}"
 
-resp = requests.get(url)
+# Step 1: Get headline
+resp = requests.get(news_url)
 data = resp.json()
 
 if resp.status_code != 200 or not data.get("articles"):
@@ -13,13 +16,42 @@ if resp.status_code != 200 or not data.get("articles"):
     exit(1)
 
 article = data["articles"][0]
-headline = html.escape(article["title"])
+raw_headline = article["title"]
+headline = html.escape(raw_headline.strip()) if raw_headline else "No headline available"
 story_url = article["url"]
 
-# Quick real links to get you going
-left_oped = "https://www.vox.com/"
-right_oped = "https://www.wsj.com/"
+print(f"📰 Headline: {headline}")
+print(f"🔗 Original article: {story_url}")
 
+# Step 2: Define source bias lists
+LEFT_SOURCES = ["vox.com", "msnbc.com", "slate.com", "motherjones.com", "theatlantic.com"]
+RIGHT_SOURCES = ["foxnews.com", "wsj.com", "nypost.com", "nationalreview.com", "dailywire.com"]
+
+def search_google_news(query, bias_list):
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+    q = urllib.parse.quote_plus(query)
+    url = f"https://www.google.com/search?q={q}&tbm=nws"
+    resp = requests.get(url, headers=headers)
+    soup = BeautifulSoup(resp.text, "html.parser")
+    for a in soup.find_all("a", href=True):
+        href = a["href"]
+        if "url?q=" in href:
+            link = href.split("url?q=")[1].split("&")[0]
+            for domain in bias_list:
+                if domain in link:
+                    return link
+    return None
+
+# Step 3: Find relevant left and right links
+left_oped = search_google_news(raw_headline, LEFT_SOURCES) or "https://www.vox.com/"
+right_oped = search_google_news(raw_headline, RIGHT_SOURCES) or "https://www.wsj.com/"
+
+print(f"🔵 Left link: {left_oped}")
+print(f"🔴 Right link: {right_oped}")
+
+# Step 4: Generate HTML
 new_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -48,7 +80,8 @@ new_html = f"""<!DOCTYPE html>
 </body>
 </html>"""
 
+# Step 5: Write to file
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(new_html)
 
-print("✅ index.html updated with headline from NewsAPI.")
+print("✅ index.html updated successfully.")

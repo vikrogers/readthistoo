@@ -7,7 +7,7 @@ import urllib.parse
 API_KEY = "bf39c65adee34e8e9c7c3c434f58f4d3"
 news_url = f"https://newsapi.org/v2/top-headlines?country=us&apiKey={API_KEY}"
 
-# Step 1: Get headline
+# Step 1: Get top headline
 resp = requests.get(news_url)
 data = resp.json()
 
@@ -16,42 +16,43 @@ if resp.status_code != 200 or not data.get("articles"):
     exit(1)
 
 article = data["articles"][0]
-raw_headline = article["title"]
-headline = html.escape(raw_headline.strip()) if raw_headline else "No headline available"
-story_url = article["url"]
+raw_headline = article.get("title", "No headline").strip()
+headline = html.escape(raw_headline)
+story_url = article.get("url", "#")
 
 print(f"📰 Headline: {headline}")
-print(f"🔗 Original article: {story_url}")
+print(f"🔗 Article: {story_url}")
 
-# Step 2: Define source bias lists
+# Step 2: Define source lists
 LEFT_SOURCES = ["vox.com", "msnbc.com", "slate.com", "motherjones.com", "theatlantic.com"]
 RIGHT_SOURCES = ["foxnews.com", "wsj.com", "nypost.com", "nationalreview.com", "dailywire.com"]
 
 def search_google_news(query, bias_list):
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-    q = urllib.parse.quote_plus(query)
-    url = f"https://www.google.com/search?q={q}&tbm=nws"
-    resp = requests.get(url, headers=headers)
-    soup = BeautifulSoup(resp.text, "html.parser")
-    for a in soup.find_all("a", href=True):
-        href = a["href"]
-        if "url?q=" in href:
-            link = href.split("url?q=")[1].split("&")[0]
-            for domain in bias_list:
-                if domain in link:
-                    return link
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        q = urllib.parse.quote_plus(query)
+        url = f"https://www.google.com/search?q={q}&tbm=nws"
+        resp = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if "url?q=" in href:
+                link = href.split("url?q=")[1].split("&")[0]
+                for domain in bias_list:
+                    if domain in link:
+                        return link
+    except Exception as e:
+        print(f"⚠️ Error searching Google: {e}")
     return None
 
-# Step 3: Find relevant left and right links
+# Step 3: Get matching op-eds
 left_oped = search_google_news(raw_headline, LEFT_SOURCES) or "https://www.vox.com/"
 right_oped = search_google_news(raw_headline, RIGHT_SOURCES) or "https://www.wsj.com/"
 
-print(f"🔵 Left link: {left_oped}")
-print(f"🔴 Right link: {right_oped}")
+print(f"🔵 Left-leaning article: {left_oped}")
+print(f"🔴 Right-leaning article: {right_oped}")
 
-# Step 4: Generate HTML
+# Step 4: Build HTML
 new_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -80,8 +81,7 @@ new_html = f"""<!DOCTYPE html>
 </body>
 </html>"""
 
-# Step 5: Write to file
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(new_html)
 
-print("✅ index.html updated successfully.")
+print("✅ Site updated successfully.")
